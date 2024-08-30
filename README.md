@@ -1,21 +1,34 @@
-# Whisper
+# What This Is
+This fork of OpenAI's Whisper provides functionality to be able to do mechanistic interpreatbility on Whisper easily. The four key pillars are:
+1. Easy tooling to visualize attention tables and relationships between chunks of audio/tokens with previous chunks/tokens, akin to `circuitvis`.
+2. Easy tooling to train SAEs.
+3. Easy tooling to rapidly perform ablations and (possibly) attribution-patching.
+4. Easy tooling to be able to get key metrics from network performance, including when ablated as above.
+5. Easy tooling for synthetic dataset generation.
+
+(And tutorials for the above; please look into `notebooks/`, which combines the original papers' notebooks with our new interpretability notebooks). 
+
+# Setup
+Generally, I would recommend running with `pip3 instal -e .` in the repository root working directory after pulling this repository. That way you can modify the python code and it will manifest in the calling functionality. Otherwise, you can follow the instructions below in the "Original Paper" section.
+
+# Original Paper: Media
 
 [[Blog]](https://openai.com/blog/whisper)
 [[Paper]](https://arxiv.org/abs/2212.04356)
 [[Model card]](https://github.com/openai/whisper/blob/main/model-card.md)
-[[Colab example]](https://colab.research.google.com/github/openai/whisper/blob/master/notebooks/LibriSpeech.ipynb)
+[[Colab example]](https://colab.research.google.com/github/openai/whisper/blob/master/notebooks/OriginalPaper_LibriSpeech.ipynb)
 
 Whisper is a general-purpose speech recognition model. It is trained on a large dataset of diverse audio and is also a multitasking model that can perform multilingual speech recognition, speech translation, and language identification.
 
 
-## Approach
+## Original Paper: Approach
 
 ![Approach](https://raw.githubusercontent.com/openai/whisper/main/approach.png)
 
 A Transformer sequence-to-sequence model is trained on various speech processing tasks, including multilingual speech recognition, speech translation, spoken language identification, and voice activity detection. These tasks are jointly represented as a sequence of tokens to be predicted by the decoder, allowing a single model to replace many stages of a traditional speech-processing pipeline. The multitask training format uses a set of special tokens that serve as task specifiers or classification targets.
 
 
-## Setup
+## Original Paper: Setup
 
 We used Python 3.9.9 and [PyTorch](https://pytorch.org/) 1.10.1 to train and test our models, but the codebase is expected to be compatible with Python 3.8-3.11 and recent PyTorch versions. The codebase also depends on a few Python packages, most notably [OpenAI's tiktoken](https://github.com/openai/tiktoken) for their fast tokenizer implementation. You can download and install (or update to) the latest release of Whisper with the following command:
 
@@ -55,7 +68,7 @@ pip install setuptools-rust
 ```
 
 
-## Available models and languages
+## Original Paper: Available models and languages
 
 There are five model sizes, four with English-only versions, offering speed and accuracy tradeoffs. Below are the names of the available models and their approximate memory requirements and inference speed relative to the large model; actual speed may vary depending on many factors including the available hardware.
 
@@ -75,7 +88,7 @@ Whisper's performance varies widely depending on the language. The figure below 
 
 
 
-## Command-line usage
+## Original Paper: Command-line usage
 
 The following command will transcribe speech in audio files, using the `medium` model:
 
@@ -96,7 +109,7 @@ Run the following to view all available options:
 See [tokenizer.py](https://github.com/openai/whisper/blob/main/whisper/tokenizer.py) for the list of all available languages.
 
 
-## Python usage
+## Original Paper: Python usage
 
 Transcription can also be performed within Python: 
 
@@ -136,11 +149,11 @@ result = whisper.decode(model, mel, options)
 print(result.text)
 ```
 
-## More examples
+## Original Paper: More examples
 
 Please use the [🙌 Show and tell](https://github.com/openai/whisper/discussions/categories/show-and-tell) category in Discussions for sharing more example usages of Whisper and third-party extensions such as web demos, integrations with other tools, ports for different platforms, etc.
 
 
-## License
+## Original Paper: License
 
 Whisper's code and model weights are released under the MIT License. See [LICENSE](https://github.com/openai/whisper/blob/main/LICENSE) for further details.

@@ -2,6 +2,19 @@ numba
 numpy
 torch
 tqdm
+einops
+jaxtyping
 more-itertools
 tiktoken
 triton>=2.0.0,<3;platform_machine=="x86_64" and sys_platform=="linux" or sys_platform=="linux2"
+# Interpretability tooling
+transformer_lens
+circuitsvis
+plotly
+wandb
+pydantic
+# Sound
+librosa
+soundfile
+pydub
+jiwer
