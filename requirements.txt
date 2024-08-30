@@ -13,6 +13,7 @@ triton>=2.0.0,<3;platform_machine=="x86_64" and sys_platform=="linux" or sys_pla
 transformer_lens
 circuitsvis
 plotly
+tabulate
 wandb
 pydantic
 tqdm
