@@ -151,6 +151,8 @@ class MultiHeadAttention(nn.Module):
 
         qk = self.hook_attn_scores(q @ k)  # batch n_head seq seq
         if mask is not None:
+            # Mask is a sq. (seq seq) tensor that normally (look below to block(..., mask=...))
+            # Sets some parts to negative infinity so that they won't be included in the softmax
             qk = qk + mask[:n_ctx, :n_ctx]
         qk = qk.float()
         qk = self.hook_attn_scores_masked(qk)  # batch n_head seq seq
