@@ -9,3 +9,12 @@ thumbs.db
 .DS_Store
 .idea
 
+# Python venv
+*.venv*/
+*venv*/
+
+# Files generated usually during testing
+*.mp3
+*.m4a
+*.flac
+*.wav

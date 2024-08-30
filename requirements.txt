@@ -1,8 +1,10 @@
 numba
 numpy
 torch
+torchaudio
 tqdm
 einops
+einsum
 jaxtyping
 more-itertools
 tiktoken
@@ -13,8 +15,46 @@ circuitsvis
 plotly
 wandb
 pydantic
+tqdm
+# Jupyter, etc...
+ipython
+notebook
+ipykernel
 # Sound
 librosa
 soundfile
 pydub
 jiwer
+# Above is a subset of below + packages from OG Whisper:
+# torch
+# torchvision
+# torchaudio
+# matplotlib
+# numpy
+# tqdm
+# transformer_lens
+# circuitsvis
+# plotly
+# ipython
+# einops
+# notebook
+# transformers
+# datasets
+# evaluate
+# jupyter
+# matplotlib
+# scikit-learn
+# wandb
+# tensorboard
+# jaxtyping
+# torchtyping
+# tiktoken
+# frozendict
+# torchinfo
+# openai
+# pydantic
+# # Sound
+# librosa
+# soundfile
+# pydub
+# jiwer
