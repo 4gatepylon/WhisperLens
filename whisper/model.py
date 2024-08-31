@@ -17,10 +17,6 @@ from .decoding import decode as decode_function
 from .decoding import detect_language as detect_language_function
 from .transcribe import transcribe as transcribe_function
 
-# XXX(Adriano) some sort of bug has been introduced (not clear what) that makes the model totally suck and stop working
-# (perhaps some sort of approximation error?) PLEASE FIX BEFORE PUSHING
-
-
 @dataclass
 class ModelDimensions:
     n_mels: int
@@ -116,38 +112,14 @@ class MultiHeadAttention(nn.Module):
         wv, qk = self.qkv_attention(q, k, v, mask)
         return self.out(wv), qk
 
-    def __rearrange_resid_into_heads(self, x: Tensor, seq_last: bool = False):
-        target = "batch n_head d_head seq" if seq_last else "batch n_head seq d_head"
-        return einops.rearrange(
-            x, f"batch seq (n_head d_head) -> {target}", n_head=self.n_head
-        )
-
-    def __rearrange_heads_into_resid(self, x: Tensor, seq_last: bool = False):
-        return einops.rearrange(
-            x,
-            "batch n_head seq d_head -> batch seq (n_head d_head)",
-            n_head=self.n_head,
-        )
-
     def qkv_attention(
         self, q: Tensor, k: Tensor, v: Tensor, mask: Optional[Tensor] = None
     ):
         n_batch, n_ctx, n_state = q.shape
         scale = (n_state // self.n_head) ** -0.25
-        # TODO(Adriano) drop the double-computation. Right now, `permute` is the original code, and to avoid
-        #     having to write a test and also avoid breaking this shit, we are just doing it twice.
-        q1 = q.view(*q.shape[:2], self.n_head, -1).permute(0, 2, 1, 3) * scale
-        q2 = self.__rearrange_resid_into_heads(q) * scale
-        k1 = k.view(*k.shape[:2], self.n_head, -1).permute(0, 2, 3, 1) * scale
-        k2 = self.__rearrange_resid_into_heads(k, seq_last=True) * scale
-        # Values do NOT get scaled
-        v1 = v.view(*v.shape[:2], self.n_head, -1).permute(0, 2, 1, 3)
-        v2 = self.__rearrange_resid_into_heads(v)
-        assert q1.shape == q2.shape and torch.all(q1 == q2), "Q: einops does not work?"
-        assert k1.shape == k2.shape and torch.all(k1 == k2), "K: einops does not work?"
-        assert v1.shape == v2.shape and torch.all(v1 == v2), "V: einops does not work?"
-
-        q, k, v = q2, k2, v2
+        q = q.view(*q.shape[:2], self.n_head, -1).permute(0, 2, 1, 3) * scale
+        k = k.view(*k.shape[:2], self.n_head, -1).permute(0, 2, 3, 1) * scale
+        v = v.view(*v.shape[:2], self.n_head, -1).permute(0, 2, 1, 3) # No scale
 
         qk = self.hook_attn_scores(q @ k)  # batch n_head seq seq
         if mask is not None:
@@ -157,17 +129,9 @@ class MultiHeadAttention(nn.Module):
         qk = qk.float()
         qk = self.hook_attn_scores_masked(qk)  # batch n_head seq seq
 
-        w = self.hook_attn_pattern(
-            F.softmax(qk, dim=-1).to(q.dtype)
-        )  # batch n_head seq seq
-        x = w @ v  # batch n_head seq d_head
-        y1 = (w @ v).permute(0, 2, 1, 3).flatten(start_dim=2)
-        y2 = self.hook_attn_result(self.__rearrange_heads_into_resid(x))
-        assert y1.shape == y2.shape and torch.all(
-            y1 == y2
-        ), "QKV -> Resid: Einops does not work?"
-        z = y2  # batch n_head d_resid
-        return z, qk.detach()
+        # batch n_head seq seq (or for cross seq1 seq2)
+        w = self.hook_attn_pattern(F.softmax(qk, dim=-1).to(q.dtype))
+        return self.hook_attn_result((w @ v).permute(0, 2, 1, 3).flatten(start_dim=2)), qk.detach()
 
 
 class ResidualAttentionBlock(nn.Module):
@@ -231,6 +195,7 @@ class ResidualAttentionBlock(nn.Module):
                 self.hook_attn_ln_post(self.attn_ln(x)), mask=mask, kv_cache=kv_cache
             )[0]
         )
+        # NOTE that cross-attn uses NO mask (so in some sense it has "listened ahead")
         if self.cross_attn:
             x = self.hook_x_resid_mid(
                 x
@@ -287,14 +252,7 @@ class AudioEncoder(nn.Module):
         x = F.gelu(self.hook_conv1_post_pre_act(self.conv1(self.hook_conv1_pre(x))))
         x = F.gelu(self.hook_conv2_post_pre_act(self.conv2(self.hook_conv2_pre(x))))
         x = self.hook_conv2_post_post_act(x)
-        # TODO(Adriano) drop the double-computation. Right now, `permute` is the original code, and to avoid
-        #     having to write a test and also avoid breaking this shit, we are just doing it twice.
-        x1 = x.permute(0, 2, 1)
-        x2 = einops.rearrange(x, "batch seq channel -> batch channel seq")
-        assert x1.shape == x2.shape and torch.all(
-            x1 == x2
-        ), "seq chan -> chan seq: Einops does not work?"
-        x = x2
+        x = x.permute(0, 2, 1)
 
         assert x.shape[1:] == self.positional_embedding.shape, "incorrect audio shape"
         x = (x + self.positional_embedding).to(x.dtype)

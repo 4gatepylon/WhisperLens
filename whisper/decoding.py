@@ -113,6 +113,10 @@ class DecodingOptions:
     # implementation details
     fp16: bool = True  # use fp16 for most of the calculation
 
+    # TODO(Adriano) support hook-points where the activations are actually
+    # including the KV-cache
+    no_kv_cache: bool = False  # disable key-value caching for debugging & interpretability
+
 
 @dataclass(frozen=True)
 class DecodingResult:
@@ -134,7 +138,7 @@ class Inference:
 
     def rearrange_kv_cache(self, source_indices) -> None:
         """Update the key-value cache according to the updated beams"""
-        raise NotImplementedError
+        raise NotImplementedError # Turn into a no-op if no kv cache is requested
 
     def cleanup_caching(self) -> None:
         """Clean up any resources or hooks after decoding is finished"""
@@ -142,38 +146,40 @@ class Inference:
 
 
 class PyTorchInference(Inference):
-    def __init__(self, model: "Whisper", initial_token_length: int):
+    def __init__(self, model: "Whisper", initial_token_length: int, options: DecodingOptions):
         self.model: "Whisper" = model
         self.initial_token_length = initial_token_length
-        self.kv_cache = {}
-        self.hooks = []
+        self.kv_cache = {} if not options.no_kv_cache else None
+        self.hooks = [] if not options.no_kv_cache else None
 
         key_modules = [block.attn.key for block in self.model.decoder.blocks]
         value_modules = [block.attn.value for block in self.model.decoder.blocks]
-        self.kv_modules = key_modules + value_modules
+        self.kv_modules = (key_modules + value_modules) if options.no_kv_cache else []
 
     def logits(self, tokens: Tensor, audio_features: Tensor) -> Tensor:
-        if not self.kv_cache:
+        if  self.kv_cache is not None and len(self.kv_cache) == 0:
             self.kv_cache, self.hooks = self.model.install_kv_cache_hooks()
 
-        if tokens.shape[-1] > self.initial_token_length:
+        if self.kv_cache is not None and tokens.shape[-1] > self.initial_token_length:
             # only need to use the last token except in the first forward pass
             tokens = tokens[:, -1:]
 
         return self.model.decoder(tokens, audio_features, kv_cache=self.kv_cache)
 
     def cleanup_caching(self):
-        for hook in self.hooks:
-            hook.remove()
+        if self.kv_cache is not None:
+            for hook in self.hooks:
+                hook.remove()
 
-        self.kv_cache = {}
-        self.hooks = []
+            self.kv_cache = {}
+            self.hooks = []
 
     def rearrange_kv_cache(self, source_indices):
-        if source_indices != list(range(len(source_indices))):
-            for module in self.kv_modules:
-                # update the key/value cache to contain the selected sequences
-                self.kv_cache[module] = self.kv_cache[module][source_indices].detach()
+        if self.kv_cache is not None:
+            if source_indices != list(range(len(source_indices))):
+                for module in self.kv_modules:
+                    # update the key/value cache to contain the selected sequences
+                    self.kv_cache[module] = self.kv_cache[module][source_indices].detach()
 
 
 class SequenceRanker:
@@ -537,7 +543,7 @@ class DecodingTask:
         self.sot_index: int = self.initial_tokens.index(tokenizer.sot)
 
         # inference: implements the forward pass through the decoder, including kv caching
-        self.inference = PyTorchInference(model, len(self.initial_tokens))
+        self.inference = PyTorchInference(model, len(self.initial_tokens), options)
 
         # sequence ranker: implements how to rank a group of sampled sequences
         self.sequence_ranker = MaximumLikelihoodRanker(options.length_penalty)
