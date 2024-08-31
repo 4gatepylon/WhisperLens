@@ -1,10 +1,11 @@
 # What This Is
-This fork of OpenAI's Whisper provides functionality to be able to do mechanistic interpreatbility on Whisper easily. The four key pillars are:
-1. Easy tooling to visualize attention tables and relationships between chunks of audio/tokens with previous chunks/tokens, akin to `circuitvis`.
-2. Easy tooling to train SAEs.
-3. Easy tooling to rapidly perform ablations and (possibly) attribution-patching.
-4. Easy tooling to be able to get key metrics from network performance, including when ablated as above.
-5. Easy tooling for synthetic dataset generation.
+This fork of OpenAI's Whisper provides functionality to be able to do mechanistic interpreatbility on Whisper easily. The six key pillars are:
+1. Easy tooling to be able to perform simple interventions and `run_with_hooks`, `run_with_cache`, etc... You should be able to easily use some well-known datasets to get some steering vectors for things such as language.
+2. Easy tooling to visualize attention tables and relationships between chunks of audio/tokens with previous chunks/tokens, akin to `circuitvis`.
+3. Easy tooling to train SAEs.
+4. Easy tooling to rapidly perform ablations and (possibly) attribution-patching.
+5. Easy tooling to be able to get key metrics from network performance, including when ablated as above.
+6. Easy tooling for synthetic dataset generation.
 
 (And tutorials for the above; please look into `notebooks/`, which combines the original papers' notebooks with our new interpretability notebooks). 
 
