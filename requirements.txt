@@ -21,6 +21,7 @@ tqdm
 ipython
 notebook
 ipykernel
+ipywidgets
 # Sound
 librosa
 soundfile
